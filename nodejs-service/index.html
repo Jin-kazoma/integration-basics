@@ -1,0 +1,372 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calculator</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        background: #f2f2f2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+      }
+
+      /* Main layout */
+      .container {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        width: 100%;
+        max-width: 650px;
+      }
+
+      /* Calculator and history cards */
+      .calculator,
+      .history {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+      }
+
+      /* Calculator */
+      .calculator {
+        width: 100%;
+        max-width: 300px;
+      }
+
+      /* Display */
+      #display {
+        width: 100%;
+        height: 60px;
+        margin-bottom: 15px;
+        padding: 10px;
+        font-size: 28px;
+        text-align: right;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+
+      /* Calculator buttons */
+      .buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
+      button {
+        height: 55px;
+        font-size: 18px;
+        cursor: pointer;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background: #f8f8f8;
+      }
+
+      button:active {
+        transform: scale(0.97);
+      }
+
+      /* Special buttons */
+      .special {
+        grid-column: span 2;
+      }
+
+      .equals {
+        grid-column: span 2;
+      }
+
+      /* History */
+      .history {
+        width: 100%;
+        max-width: 300px;
+        height: 400px;
+        overflow-y: auto;
+      }
+
+      .history h2 {
+        margin-top: 0;
+      }
+
+      .history-item {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        margin: 0;
+      }
+      
+      /* PHONE RESPONSIVE DESIGN */
+
+      @media (max-width: 700px) {
+        body {
+          align-items: flex-start;
+          padding: 15px;
+        }
+
+        .container {
+          flex-direction: column;
+          align-items: center;
+          gap: 15px;
+          width: 100%;
+        }
+
+        .calculator {
+          width: 100%;
+          max-width: 400px;
+        }
+
+        .history {
+          width: 100%;
+          max-width: 400px;
+          height: 300px;
+        }
+
+        button {
+          height: 60px;
+          font-size: 20px;
+        }
+
+        #display {
+          height: 65px;
+          font-size: 30px;
+        }
+      }
+
+      /* Smaller phones */
+      @media (max-width: 380px) {
+        body {
+          padding: 10px;
+        }
+
+        .calculator,
+        .history {
+          padding: 15px;
+        }
+
+        .buttons {
+          gap: 6px;
+        }
+
+        button {
+          height: 55px;
+          font-size: 18px;
+        }
+
+        #display {
+          height: 60px;
+          font-size: 26px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <!-- CALCULATOR -->
+      <div class="calculator">
+        <input type="text" id="display" value="0" readonly />
+
+        <div class="buttons">
+          <!-- SPECIAL OPERATIONS -->
+          <button class="special" onclick="chooseOperation('power')">^</button>
+
+          <button class="special" onclick="chooseOperation('square_root')">
+            √
+          </button>
+
+          <!-- TOP ROW -->
+          <button onclick="clearCalculator()">AC</button>
+          <button onclick="deleteNumber()">DEL</button>
+          <button onclick="chooseOperation('modulo')">%</button>
+          <button onclick="chooseOperation('divide')">÷</button>
+
+          <!-- NUMBERS -->
+          <button onclick="addNumber('7')">7</button>
+          <button onclick="addNumber('8')">8</button>
+          <button onclick="addNumber('9')">9</button>
+          <button onclick="chooseOperation('multiply')">×</button>
+
+          <button onclick="addNumber('4')">4</button>
+          <button onclick="addNumber('5')">5</button>
+          <button onclick="addNumber('6')">6</button>
+          <button onclick="chooseOperation('subtract')">−</button>
+
+          <button onclick="addNumber('1')">1</button>
+          <button onclick="addNumber('2')">2</button>
+          <button onclick="addNumber('3')">3</button>
+          <button onclick="chooseOperation('add')">+</button>
+
+          <button onclick="addNumber('0')">0</button>
+          <button onclick="addNumber('.')">.</button>
+
+          <button class="equals" onclick="calculate()">=</button>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="history">
+        <h2>Calculation History</h2>
+
+        <div id="historyList">
+          <p>No calculations yet.</p>
+        </div>
+        <button id="hcBtn">Clear History</button>
+      </div>
+    </div>
+
+    <script>
+      const display = document.querySelector("#display");
+      const historyList = document.querySelector("#historyList");
+      const clear = document.querySelector("#hcBtn");
+
+      let num1 = null;
+      let operation = null;
+      let newNumber = false;
+
+      // Load saved history
+      let history = JSON.parse(localStorage.getItem("calculatorHistory")) || [];
+
+      displayHistory();
+
+      function addNumber(number) {
+        if (display.value === "0" || newNumber) {
+          display.value = number;
+          newNumber = false;
+        } else {
+          display.value += number;
+        }
+      }
+
+      function chooseOperation(selectedOperation) {
+        num1 = Number(display.value);
+        operation = selectedOperation;
+
+        // Square root only needs one number
+        if (selectedOperation === "square_root") {
+          calculate();
+          return;
+        }
+
+        newNumber = true;
+      }
+
+      async function calculate() {
+        let num2 = Number(display.value);
+
+        if (operation === "square_root") {
+          num2 = 0;
+        }
+
+        try {
+          const response = await fetch("/api/calculate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              num1: num1,
+              num2: num2,
+              operation: operation,
+            }),
+          });
+
+          const data = await response.json();
+
+          const finalResult = data.python_result.result;
+
+          display.value = finalResult;
+
+          const symbols = {
+            add: "+",
+            subtract: "−",
+            multiply: "×",
+            divide: "÷",
+            modulo: "%",
+            power: "^",
+            square_root: "√",
+          };
+
+          let calculation;
+
+          if (operation === "square_root") {
+            calculation = "√" + num1 + " = " + finalResult;
+          } else {
+            calculation =
+              num1 +
+              " " +
+              symbols[operation] +
+              " " +
+              num2 +
+              " = " +
+              finalResult;
+          }
+
+          // Add calculation to history array
+          history.unshift(calculation);
+
+          // Save history to LocalStorage
+          localStorage.setItem("calculatorHistory", JSON.stringify(history));
+
+          // Display history
+          displayHistory();
+
+          newNumber = true;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function displayHistory() {
+        historyList.innerHTML = "";
+
+        if (history.length === 0) {
+          const noHistory = document.createElement("p");
+          noHistory.textContent = "No calculations yet.";
+          historyList.appendChild(noHistory);
+          return;
+        }
+
+        history.forEach(function (calculation) {
+          const historyItem = document.createElement("p");
+
+          historyItem.classList.add("history-item");
+
+          historyItem.textContent = calculation;
+
+          historyList.appendChild(historyItem);
+        });
+      }
+
+      function clearCalculator() {
+        display.value = "0";
+
+        num1 = null;
+        operation = null;
+        newNumber = false;
+      }
+
+      function deleteNumber() {
+        if (display.value.length > 1) {
+          display.value = display.value.slice(0, -1);
+        } else {
+          display.value = "0";
+        }
+      }
+
+      clear.addEventListener("click", function () {
+        history = [];
+        localStorage.setItem("calculatorHistory", JSON.stringify(history));
+        displayHistory();
+      });
+    </script>
+  </body>
+</html>
